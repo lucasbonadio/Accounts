@@ -20,11 +20,11 @@ function operation() {
         if (action === 'Make account') {
             createAccount()
         } else if (action === 'Check balance') {
-
+            getAccountBalance()
         } else if (action === 'Deposit') {
             deposit()
         } else if (action === 'Withdraw') {
-
+            withdraw()
         } else if (action === 'Exit') {
             console.log(chalk.bgCyan("Thanks for using the Accounts!"))
             process.exit();
@@ -58,7 +58,7 @@ function buildAccount() {
         if (fs.existsSync(`accounts/${accountName}.json`)) {
             console.log(chalk.red('This account already exists, choose other name'))
             buildAccount();
-            return
+            return operation();
         }
 
         fs.writeFileSync(`accounts/${accountName}.json`, '{"balance": 0}', (error) => {
@@ -71,8 +71,8 @@ function buildAccount() {
     }).catch(err => console.log(err));
 }
 
-// Function to Deposit
-function deposit(accountName) {
+// Function to deposit
+function deposit() {
     inquirer.prompt([{
         name: 'accountName',
         message: 'Enter the name of account to deposit:'
@@ -97,10 +97,54 @@ function deposit(accountName) {
 
 }
 
+//Function to get account balance
+function getAccountBalance() {
+    inquirer.prompt([{
+        name: 'accountName',
+        message: "What's the name of the account:"
+    }]).then(response => {
+        const accountName = response['accountName'];
+
+        if (!checkAccount(accountName)) {
+            return getAccountBalance();
+        }
+
+        const accountBalance = getAccount(accountName);
+
+        console.log(chalk.bgCyan.black(`Your account have $${accountBalance.balance}`));
+        operation();
+    }).catch(err => console.log(err))
+}
+
+//Function to withdraw
+function withdraw() {
+    inquirer.prompt([{
+        name: 'accountName',
+        message: 'Enter the name of account to withdraw:'
+    }]).then(response => {
+        const accountName = response['accountName'];
+
+        if (!checkAccount(accountName)) {
+            return withdraw();
+        }
+
+        inquirer.prompt([{
+            name: 'withdraw',
+            message: 'How much do you want to withdraw:'
+        }]).then(response => {
+            const withdraw = response['withdraw'];
+            withdrawAmount(accountName, withdraw)
+
+        }).catch(err => console.log(err))
+
+
+    }).catch(err => console.log(err))
+}
+
 //Functions that may be reused
 function checkAccount(accountName) {
     if (!fs.existsSync(`accounts/${accountName}.json`)) {
-        console.log(chalk.red("This account doesn't exists, please enter other name"));
+        console.log(chalk.red("This account doesn't exists, please enter a valid name"));
         return false;
     } else {
         return true
@@ -119,6 +163,27 @@ function addAmount(accountName, amount) {
     }
 
     console.log(chalk.green(`Was deposited with sucessful the amount of the ${amount}`));
+}
+
+function withdrawAmount(accountName, amount) {
+    const accountData = getAccount(accountName);
+
+    if (!amount) {
+        console.log(chalk.red('Put a value to withdraw'));
+        return withdraw();
+    }
+
+    if (accountData.balance < amount) {
+        console.log(chalk.bgRed.black('Insuficient balance'))
+        return withdraw();
+    } else {
+
+        accountData.balance -= Number(amount)
+        fs.writeFileSync(`accounts/${accountName}.json`, JSON.stringify(accountData), err => console.log(err));
+
+        console.log(chalk.green(`Was withdraw with sucessful the amount of ${amount}`));
+        operation();
+    }
 }
 
 function getAccount(accountName) {
